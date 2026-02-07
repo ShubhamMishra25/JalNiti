@@ -153,6 +153,9 @@ class SolvencyService:
             response.raise_for_status()
             data = response.json()
             
+            # Debug: log surveys API response to check for coordinates
+            print(f"[DEBUG] Surveys API response sample: {data[:2] if data else 'Empty'}")
+            
             if not data:
                 return get_message("no_plots", lang)
             
@@ -193,9 +196,19 @@ class SolvencyService:
             plot_response.raise_for_status()
             plot_data = plot_response.json()
             
+            # Debug: log the plot API response
+            print(f"[DEBUG] Plot info API response: {plot_data}")
+            
             # Save coordinates for reuse
-            session.latitude = plot_data.get('latitude')
-            session.longitude = plot_data.get('longitude')
+            session.latitude = plot_data.get('latitudeApprox')
+            session.longitude = plot_data.get('longitudeApprox')
+            
+            # Debug: log the extracted coordinates
+            print(f"[DEBUG] Extracted coordinates: lat={session.latitude}, lon={session.longitude}")
+            
+            # If coordinates are missing, we can't proceed with water balance calculations
+            if session.latitude is None or session.longitude is None:
+                print("[ERROR] No coordinates returned from plot-info API - water balance calculations will fail")
             
             owners = plot_data.get('owners', [])
             session.plot_owners = owners
@@ -250,6 +263,10 @@ class SolvencyService:
         Raises exception on error.
         """
         try:
+            # Check if coordinates are available
+            if session.latitude is None or session.longitude is None:
+                raise ValueError(f"Missing coordinates: lat={session.latitude}, lon={session.longitude}")
+            
             balance_url = f"{self.backend_url}/balance/gw-balance"
             balance_payload = {
                 "latitude": session.latitude,
@@ -266,14 +283,20 @@ class SolvencyService:
             balance_response.raise_for_status()
             balance_data = balance_response.json()
             
+            # Debug: log the actual API response
+            print(f"[DEBUG] Water balance API response: {balance_data}")
+            
             # Save raw data and extract numeric balance
             session.water_balance_data = balance_data if isinstance(balance_data, dict) else {"balance": balance_data}
             session.water_balance_value = self._extract_numeric(
                 balance_data,
-                ['balance', 'gw_balance', 'available_water', 'groundwater_balance',
+                ['groundwater_available_litres', 'balance', 'gw_balance', 'available_water', 'groundwater_balance',
                  'total_balance', 'water_balance', 'net_balance',
                  'water_required_litres', 'available_litres', 'total_water']
             )
+            
+            # Debug: log what value was extracted
+            print(f"[DEBUG] Extracted water balance value: {session.water_balance_value}")
             
         except requests.exceptions.ConnectionError:
             raise ConnectionError("Unable to connect to balance API.")
@@ -321,6 +344,10 @@ class SolvencyService:
             
             water_bal = session.water_balance_value
             
+            # Debug: log the saved water balance and required water
+            print(f"[DEBUG] Saved water balance: {water_bal}")
+            print(f"[DEBUG] Water required for {crop_used}: {water_required}")
+            
             result = get_message("water_req_header", lang, crop=crop_used.title())
             result += get_message("station_label", lang, station=station.title()) + "\n"
             result += get_message("season_label", lang, season=season.title()) + "\n\n"
@@ -329,6 +356,7 @@ class SolvencyService:
             result += get_message("effective_rain_label", lang, value=effective_rain_mm or 'N/A') + "\n"
             result += get_message("net_irrigation_label", lang, value=net_irrigation_mm or 'N/A') + "\n"
             result += get_message("total_water_label", lang, value=f"{water_required:,.0f}" if water_required is not None else 'N/A') + "\n"
+            result += f"💧 Available Groundwater: {f'{water_bal:,.0f}' if water_bal is not None else 'N/A'} litres\n"
             result += get_message("estimated_profit_label", lang, value=f"{total_revenue:,.2f}" if total_revenue is not None else 'N/A') + "\n\n"
             
             # Compare with groundwater balance
