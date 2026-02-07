@@ -1,0 +1,125 @@
+"""
+Water Wallet Project Structure
+================================
+
+flaskproject/
+│
+├── app.py                      # Flask application entry point
+├── webhook.py                  # WhatsApp webhook routes  
+├── config.py                   # Environment configuration
+├── whatsapp_client.py          # WhatsApp API client
+│
+├── models/                     # Data Models
+│   ├── __init__.py
+│   └── conversation_state.py  # User session state tracking
+│
+├── services/                   # API Services  
+│   ├── __init__.py
+│   ├── solvency_service.py    # Crop solvency check operations
+│   └── sowing_service.py      # Sowing advisory operations
+│
+├── conversation_engine.py      # Main conversation logic
+├── conversation.py             # Backward compatibility layer
+│
+├── scripts/                    # Utility scripts
+│   └── send_test_message.py
+│
+└── backend/                    # Backend services (if any)
+
+
+Component Flow:
+═══════════════
+
+┌─────────────┐
+│   WhatsApp  │
+│    User     │
+└──────┬──────┘
+       │ Message
+       ▼
+┌─────────────────────────────────┐
+│       webhook.py                │
+│  (Receives WhatsApp messages)   │
+└───────────┬─────────────────────┘
+            │
+            ▼
+┌─────────────────────────────────┐
+│   conversation_engine.py        │
+│  - handle_incoming()            │
+│  - Route to handlers            │
+└─────┬───────────┬───────────────┘
+      │           │
+      ▼           ▼
+┌─────────┐   ┌────────────────┐
+│ Sowing  │   │   Solvency     │
+│ Service │   │   Service      │
+└────┬────┘   └────┬───────────┘
+     │             │
+     ▼             ▼
+┌──────────────────────────────┐
+│    Water Wallet Backend      │
+│      (External APIs)          │
+└──────────────────────────────┘
+
+
+Service Responsibilities:
+═════════════════════════
+
+┌─────────────────────────────────────────┐
+│         SowingService                   │
+├─────────────────────────────────────────┤
+│ • get_sowing_advice()                   │
+│   - Fetches optimal planting dates      │
+│   - Weather & soil analysis             │
+│   - Returns formatted advice            │
+└─────────────────────────────────────────┘
+
+┌─────────────────────────────────────────┐
+│       SolvencyService                   │
+├─────────────────────────────────────────┤
+│ • get_districts()                       │
+│ • get_talukas()                         │
+│ • get_villages()                        │
+│ • get_surveys()                         │
+│ • get_plot_info_and_balance()          │
+│ • get_groundwater_balance()            │
+└─────────────────────────────────────────┘
+
+
+State Machine Flow:
+═══════════════════
+
+START
+  │
+  ├─► MAIN_MENU ─┬─► (1) COLLECT_CROP ─► COLLECT_LOCATION ─► [API Call] ─► START
+  │              │
+  │              └─► (2) SOLVENCY_AREA_TYPE ─► SOLVENCY_SELECT_DISTRICT
+  │                                            │
+  │                                            ▼
+  │                                  SOLVENCY_SELECT_TALUKA
+  │                                            │
+  │                                            ▼
+  │                                  SOLVENCY_SELECT_VILLAGE
+  │                                            │
+  │                                            ▼
+  │                                  SOLVENCY_SELECT_PLOT
+  │                                            │
+  │                                            ▼
+  │                                      [API Calls] ─► START
+  │
+  └─► (menu/reset) ──────────────────────────┘
+
+
+Key Features:
+═════════════
+
+✅ Modular architecture
+✅ Separation of concerns
+✅ Easy to test and maintain
+✅ Backward compatible
+✅ Clean imports
+✅ Type hints
+✅ Error handling at each layer
+✅ Session management
+✅ Numbered selections for better UX
+✅ Input validation
+"""
