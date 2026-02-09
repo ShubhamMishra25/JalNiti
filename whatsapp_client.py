@@ -52,5 +52,30 @@ class WhatsAppClient:
         logger.info("WhatsApp message queued for %s", to)
         return response.json()
 
+    def mark_as_read(self, message_id: str) -> Dict[str, Any]:
+        """Mark a message as read to show blue ticks."""
+        if not (self.access_token and self.phone_number_id):
+            return {"status": "mock"}
+
+        url = f"https://graph.facebook.com/{self.api_version}/{self.phone_number_id}/messages"
+        headers = {
+            "Authorization": f"Bearer {self.access_token}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "messaging_product": "whatsapp",
+            "status": "read",
+            "message_id": message_id,
+        }
+
+        try:
+            response = self.session.post(url, headers=headers, json=payload, timeout=30)
+            response.raise_for_status()
+            logger.info("Message marked as read: %s", message_id)
+            return response.json()
+        except requests.HTTPError:
+            logger.error("Failed to mark message as read: %s", response.text)
+            return {"error": response.text}
+
 
 client = WhatsAppClient()
