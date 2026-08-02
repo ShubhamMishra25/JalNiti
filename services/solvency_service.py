@@ -1,6 +1,7 @@
 """Service for crop solvency check operations."""
 from __future__ import annotations
 
+import logging
 import requests
 from typing import TYPE_CHECKING, Optional
 
@@ -8,6 +9,8 @@ from translations import get_message
 
 if TYPE_CHECKING:
     from models.conversation_state import ConversationState
+
+logger = logging.getLogger(__name__)
 
 
 class SolvencyService:
@@ -153,8 +156,8 @@ class SolvencyService:
             response.raise_for_status()
             data = response.json()
             
-            # Debug: log surveys API response to check for coordinates
-            print(f"[DEBUG] Surveys API response sample: {data[:2] if data else 'Empty'}")
+            # Log surveys API response to check for coordinates
+            logger.debug("Surveys API response sample: %s", data[:2] if data else 'Empty')
             
             if not data:
                 return get_message("no_plots", lang)
@@ -196,19 +199,19 @@ class SolvencyService:
             plot_response.raise_for_status()
             plot_data = plot_response.json()
             
-            # Debug: log the plot API response
-            print(f"[DEBUG] Plot info API response: {plot_data}")
+            # Log the plot API response
+            logger.debug("Plot info API response: %s", plot_data)
             
             # Save coordinates for reuse
             session.latitude = plot_data.get('latitudeApprox')
             session.longitude = plot_data.get('longitudeApprox')
             
-            # Debug: log the extracted coordinates
-            print(f"[DEBUG] Extracted coordinates: lat={session.latitude}, lon={session.longitude}")
+            # Log the extracted coordinates
+            logger.debug("Extracted coordinates: lat=%s, lon=%s", session.latitude, session.longitude)
             
             # If coordinates are missing, we can't proceed with water balance calculations
             if session.latitude is None or session.longitude is None:
-                print("[ERROR] No coordinates returned from plot-info API - water balance calculations will fail")
+                logger.error("No coordinates returned from plot-info API - water balance calculations will fail")
             
             owners = plot_data.get('owners', [])
             session.plot_owners = owners
@@ -229,7 +232,7 @@ class SolvencyService:
                 for i, owner in enumerate(owners, 1):
                     owner_name = owner.get('ownerName', 'N/A')
                     owner_area = owner.get('totalArea', 'N/A')
-                    print(f"[DEBUG] Owner {i}: name={owner_name}, totalArea from API={owner_area}")
+                    logger.debug("Owner %s: name=%s, totalArea from API=%s", i, owner_name, owner_area)
                     session.owner_map[str(i)] = {
                         'name': owner_name,
                         'area': float(owner_area) if owner_area != 'N/A' else 0
@@ -283,8 +286,8 @@ class SolvencyService:
             balance_response.raise_for_status()
             balance_data = balance_response.json()
             
-            # Debug: log the actual API response
-            print(f"[DEBUG] Water balance API response: {balance_data}")
+            # Log the actual API response
+            logger.debug("Water balance API response: %s", balance_data)
             
             # Save raw data and extract numeric balance
             session.water_balance_data = balance_data if isinstance(balance_data, dict) else {"balance": balance_data}
@@ -295,8 +298,8 @@ class SolvencyService:
                  'water_required_litres', 'available_litres', 'total_water']
             )
             
-            # Debug: log what value was extracted
-            print(f"[DEBUG] Extracted water balance value: {session.water_balance_value}")
+            # Log what value was extracted
+            logger.debug("Extracted water balance value: %s", session.water_balance_value)
             
         except requests.exceptions.ConnectionError:
             raise ConnectionError("Unable to connect to balance API.")
@@ -312,8 +315,8 @@ class SolvencyService:
         """
         lang = session.language
         try:
-            # Debug: log the farm area being used
-            print(f"[DEBUG] get_water_requirement called with farm_area_ares={session.farm_area_ares}")
+            # Log the farm area being used
+            logger.debug("get_water_requirement called with farm_area_ares=%s", session.farm_area_ares)
             
             url = f"{self.backend_url}/crop/water-requirement"
             payload = {
@@ -344,9 +347,9 @@ class SolvencyService:
             
             water_bal = session.water_balance_value
             
-            # Debug: log the saved water balance and required water
-            print(f"[DEBUG] Saved water balance: {water_bal}")
-            print(f"[DEBUG] Water required for {crop_used}: {water_required}")
+            # Log the saved water balance and required water
+            logger.debug("Saved water balance: %s", water_bal)
+            logger.debug("Water required for %s: %s", crop_used, water_required)
             
             result = get_message("water_req_header", lang, crop=crop_used.title())
             result += get_message("station_label", lang, station=station.title()) + "\n"

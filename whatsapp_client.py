@@ -43,13 +43,20 @@ class WhatsAppClient:
             "text": {"body": body},
         }
 
-        response = self.session.post(url, headers=headers, json=payload, timeout=30)
         try:
+            response = self.session.post(url, headers=headers, json=payload, timeout=30)
             response.raise_for_status()
-        except requests.HTTPError as exc:  # pragma: no cover - simple skeleton logging
-            logger.error("WhatsApp API error: %s", response.text)
-            raise exc
-        logger.info("WhatsApp message queued for %s", to)
+        except requests.exceptions.Timeout:
+            logger.error("WhatsApp API timed out sending to %s", to)
+            return {"status": "error", "error": "timeout", "to": to}
+        except requests.exceptions.ConnectionError:
+            logger.error("WhatsApp API connection failed sending to %s", to)
+            return {"status": "error", "error": "connection_error", "to": to}
+        except requests.HTTPError:
+            logger.error("WhatsApp API error sending to %s: %s", to, response.text)
+            return {"status": "error", "error": "http_error", "detail": response.text, "to": to}
+
+        logger.info("WhatsApp message sent to %s", to)
         return response.json()
 
     def mark_as_read(self, message_id: str) -> Dict[str, Any]:
@@ -71,11 +78,18 @@ class WhatsAppClient:
         try:
             response = self.session.post(url, headers=headers, json=payload, timeout=30)
             response.raise_for_status()
-            logger.info("Message marked as read: %s", message_id)
-            return response.json()
+        except requests.exceptions.Timeout:
+            logger.error("Timed out marking message as read: %s", message_id)
+            return {"status": "error", "error": "timeout"}
+        except requests.exceptions.ConnectionError:
+            logger.error("Connection failed marking message as read: %s", message_id)
+            return {"status": "error", "error": "connection_error"}
         except requests.HTTPError:
             logger.error("Failed to mark message as read: %s", response.text)
-            return {"error": response.text}
+            return {"status": "error", "error": "http_error", "detail": response.text}
+
+        logger.info("Message marked as read: %s", message_id)
+        return response.json()
 
 
 client = WhatsAppClient()

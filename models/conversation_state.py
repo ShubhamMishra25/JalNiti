@@ -1,7 +1,7 @@
 """Conversation state model for tracking user sessions."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Dict, Optional
 
 
@@ -10,8 +10,6 @@ class ConversationState:
     """Tracks the state of a user's conversation session."""
     
     state: str = "START"
-    
-    # Language preference (persisted)
     language: str = "en"  # en, hi, mr
     language_set: bool = False  # True once user explicitly selects language
     
@@ -40,6 +38,14 @@ class ConversationState:
     district_map: Optional[Dict[str, str]] = None
     taluka_map: Optional[Dict[str, str]] = None
     village_map: Optional[Dict[str, str]] = None
+    
+    # ── Serialization ────────────────────────────────────────────────
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ConversationState":
+        return cls(**data)
     
     def has_location(self) -> bool:
         """Check if full location data is available."""

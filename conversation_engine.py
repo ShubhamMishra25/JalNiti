@@ -2,31 +2,39 @@
 from __future__ import annotations
 
 import os
+import logging
 from dataclasses import dataclass, field
 from typing import Dict
 
 from models import ConversationState
 from services import SolvencyService, SowingService
+from session_store import session_store
+from config import settings
 from translations import get_message, ENGLISH, HINDI, MARATHI
 
+logger = logging.getLogger(__name__)
 
 @dataclass
 class ConversationEngine:
     """Main conversation engine that manages user sessions and message routing."""
     
-    sessions: Dict[str, ConversationState] = field(default_factory=dict)
-    backend_url: str = field(default_factory=lambda: os.getenv("BACKEND_BASE_URL"))
+    backend_url: str = field(default_factory=lambda: settings.backend_url)
     
     def __post_init__(self):
         """Initialize services after dataclass initialization."""
         self.solvency_service = SolvencyService(self.backend_url)
         self.sowing_service = SowingService(self.backend_url)
-
+        
     def handle_incoming(self, user_id: str, message: str) -> str:
+        session = session_store.get(user_id) or ConversationState()
+        reply = self._route(message, session)
+        session_store.save(user_id, session)
+        return reply
+
+    def _route(self, message: str, session: ConversationState) -> str:
         normalized = (message or "").strip().lower()
-        session = self.sessions.setdefault(user_id, ConversationState())
         lang = session.language
-        has_language = session.language_set  # Track if language was explicitly chosen
+        has_language = session.language_set
 
         # Full reset (clears everything including location and language)
         if normalized == "reset":
@@ -182,7 +190,9 @@ class ConversationEngine:
         owner_data = session.owner_map[selection]
         session.owner_name = owner_data['name']
         session.farm_area_ares = owner_data['area']
-        print(f"[DEBUG] Owner selected: {session.owner_name}, area saved: {session.farm_area_ares}")
+        
+        # Proper logger integration
+        logger.debug("Owner selected: %s, area saved: %s", session.owner_name, session.farm_area_ares)
         
         try:
             # Calculate water balance SILENTLY (no display)
