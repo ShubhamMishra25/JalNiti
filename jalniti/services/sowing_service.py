@@ -4,31 +4,31 @@ from __future__ import annotations
 import requests
 from typing import TYPE_CHECKING
 
-from translations import get_message
+from ..translations import get_message
+from .http import BackendClient
 
 if TYPE_CHECKING:
-    from models.conversation_state import ConversationState
+    from ..models.conversation_state import ConversationState
 
 
 class SowingService:
     """Handles all sowing advisory API operations."""
-    
+
     def __init__(self, backend_url: str):
         self.backend_url = backend_url
+        self.client = BackendClient(backend_url)
     
     def get_sowing_advice(self, session: ConversationState) -> str:
         """Fetch and display sowing advice for the given crop and location."""
         lang = session.language
         try:
-            url = f"{self.backend_url}/sowing/best-sowing-day"
-            
             params = {
                 "lat": session.latitude,
                 "lon": session.longitude,
                 "crop": session.crop
             }
             
-            response = requests.get(url, params=params, timeout=30)
+            response = self.client.get("/sowing/best-sowing-day", params=params)
             
             if response.status_code == 200:
                 data = response.json()

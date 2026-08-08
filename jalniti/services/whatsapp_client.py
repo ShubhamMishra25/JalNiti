@@ -5,7 +5,7 @@ import logging
 from typing import Any, Dict, Optional
 import requests
 
-from config import settings
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 

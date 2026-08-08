@@ -6,11 +6,11 @@ import logging
 from dataclasses import dataclass, field
 from typing import Dict
 
-from models import ConversationState
-from services import SolvencyService, SowingService
-from session_store import session_store
-from config import settings
-from translations import get_message, ENGLISH, HINDI, MARATHI
+from .config import settings
+from .models import ConversationState
+from .services import SolvencyService, SowingService
+from .session_store import session_store
+from .translations import get_message, ENGLISH, HINDI, MARATHI
 
 logger = logging.getLogger(__name__)
 

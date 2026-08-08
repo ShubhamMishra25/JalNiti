@@ -15,4 +15,6 @@ build/
 
 .env
 
+# Runtime data
 sessions.db
+data/*.db

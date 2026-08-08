@@ -10,8 +10,8 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from config import settings
-from whatsapp_client import WhatsAppClient
+from jalniti.config import settings
+from jalniti.services.whatsapp_client import WhatsAppClient
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -5,10 +5,11 @@ import logging
 import requests
 from typing import TYPE_CHECKING, Optional
 
-from translations import get_message
+from ..translations import get_message
+from .http import BackendClient
 
 if TYPE_CHECKING:
-    from models.conversation_state import ConversationState
+    from ..models.conversation_state import ConversationState
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ class SolvencyService:
     
     def __init__(self, backend_url: str):
         self.backend_url = backend_url
+        self.client = BackendClient(backend_url)
     
     # ── helpers ───────────────────────────────────────────────────────────
 
@@ -41,10 +43,9 @@ class SolvencyService:
         """Fetch and display districts."""
         lang = session.language
         try:
-            url = f"{self.backend_url}/levels/districts"
             params = {"area": session.area}
             
-            response = requests.get(url, params=params, timeout=30)
+            response = self.client.get("/levels/districts", params=params)
             response.raise_for_status()
             data = response.json()
             
@@ -74,10 +75,9 @@ class SolvencyService:
         """Fetch and display talukas."""
         lang = session.language
         try:
-            url = f"{self.backend_url}/levels/talukas"
             params = {"area": session.area, "districtCode": session.district_code}
             
-            response = requests.get(url, params=params, timeout=30)
+            response = self.client.get("/levels/talukas", params=params)
             response.raise_for_status()
             data = response.json()
             
@@ -106,14 +106,13 @@ class SolvencyService:
         """Fetch and display villages."""
         lang = session.language
         try:
-            url = f"{self.backend_url}/levels/villages"
             params = {
                 "area": session.area, 
                 "districtCode": session.district_code,
                 "talukaCode": session.taluka_code
             }
             
-            response = requests.get(url, params=params, timeout=30)
+            response = self.client.get("/levels/villages", params=params)
             response.raise_for_status()
             data = response.json()
             
@@ -144,7 +143,6 @@ class SolvencyService:
         """Fetch available plots and ask user to enter their plot number."""
         lang = session.language
         try:
-            url = f"{self.backend_url}/levels/surveys"
             params = {
                 "area": session.area, 
                 "districtCode": session.district_code,
@@ -152,7 +150,7 @@ class SolvencyService:
                 "villageCode": session.village_gis_code  # surveys uses villageCode
             }
             
-            response = requests.get(url, params=params, timeout=30)
+            response = self.client.get("/levels/surveys", params=params)
             response.raise_for_status()
             data = response.json()
             
@@ -186,7 +184,6 @@ class SolvencyService:
         """
         lang = session.language
         try:
-            plot_url = f"{self.backend_url}/levels/plot-info"
             plot_params = {
                 "area": session.area,
                 "districtCode": session.district_code,
@@ -195,7 +192,7 @@ class SolvencyService:
                 "plotNo": session.plot_no
             }
             
-            plot_response = requests.get(plot_url, params=plot_params, timeout=30)
+            plot_response = self.client.get("/levels/plot-info", params=plot_params)
             plot_response.raise_for_status()
             plot_data = plot_response.json()
             
@@ -270,19 +267,13 @@ class SolvencyService:
             if session.latitude is None or session.longitude is None:
                 raise ValueError(f"Missing coordinates: lat={session.latitude}, lon={session.longitude}")
             
-            balance_url = f"{self.backend_url}/balance/gw-balance"
             balance_payload = {
                 "latitude": session.latitude,
                 "longitude": session.longitude,
                 "farm_area_ares": session.farm_area_ares
             }
             
-            balance_response = requests.post(
-                balance_url, 
-                json=balance_payload, 
-                headers={"Content-Type": "application/json"},
-                timeout=30
-            )
+            balance_response = self.client.post("/balance/gw-balance", data=balance_payload)
             balance_response.raise_for_status()
             balance_data = balance_response.json()
             
@@ -318,7 +309,6 @@ class SolvencyService:
             # Log the farm area being used
             logger.debug("get_water_requirement called with farm_area_ares=%s", session.farm_area_ares)
             
-            url = f"{self.backend_url}/crop/water-requirement"
             payload = {
                 "latitude": session.latitude,
                 "longitude": session.longitude,
@@ -326,11 +316,7 @@ class SolvencyService:
                 "farm_area": session.farm_area_ares
             }
             
-            response = requests.post(
-                url, json=payload,
-                headers={"Content-Type": "application/json"},
-                timeout=30
-            )
+            response = self.client.post("/crop/water-requirement", data=payload)
             response.raise_for_status()
             data = response.json()
             
@@ -395,13 +381,12 @@ class SolvencyService:
         """Fetch top crop recommendations for the user's location."""
         lang = session.language
         try:
-            url = f"{self.backend_url}/crop/top-crops"
             params = {
                 "latitude": session.latitude,
                 "longitude": session.longitude
             }
             
-            response = requests.get(url, params=params, timeout=30)
+            response = self.client.get("/crop/top-crops", params=params)
             response.raise_for_status()
             data = response.json()
             

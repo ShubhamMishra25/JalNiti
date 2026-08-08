@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 from flask import Flask
 
-from webhook import webhook_bp
+from .api import webhook_bp
 
 
 def create_app() -> Flask:
@@ -21,6 +21,10 @@ def create_app() -> Flask:
 app = create_app()
 
 
-if __name__ == "__main__":
+def main() -> None:
     logging.basicConfig(level=logging.INFO)
     app.run(port=5000)
+
+
+if __name__ == "__main__":
+    main()

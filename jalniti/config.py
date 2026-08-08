@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-@dataclass
+@dataclass(frozen=True)
 class Settings:
     verify_token: Optional[str] = os.getenv("VERIFY_TOKEN")
     access_token: Optional[str] = os.getenv("ACCESS_TOKEN")
@@ -18,6 +18,7 @@ class Settings:
     business_account_id: Optional[str] = os.getenv("WHATSAPP_BUSINESS_ACCOUNT_ID")
     test_number: Optional[str] = os.getenv("TEST_NUMBER")
     backend_url: Optional[str] = os.getenv("BACKEND_BASE_URL")
+    session_db_path: Optional[str] = os.getenv("SESSION_DB_PATH")
 
     def credentials_ready(self) -> bool:
         return bool(self.access_token and self.phone_number_id)

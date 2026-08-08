@@ -83,17 +83,30 @@ The Flask webhook is mandatory as WhatsApp Cloud API operates in an event-driven
 
 ---
 
-## Folder Structure (Suggested)
+## Folder Structure
 
 ```
-whatsapp-service/
+Jalniti/
 │
-├── app.py                # Flask app entry
-├── webhook.py            # WhatsApp webhook routes
-├── conversation.py       # Minimal placeholder logic
-├── whatsapp_client.py    # Send message utility (real API or mock)
-├── config.py             # Tokens & configuration loader
+├── app.py                     # Thin entry point (python app.py)
+├── jalniti/                  # Application package
+│   ├── app.py                # Flask app factory + WSGI app
+│   ├── config.py             # Tokens & configuration (frozen Settings)
+│   ├── conversation_engine.py# Conversation state machine + handlers
+│   ├── conversation.py       # Backward-compatible re-exports
+│   ├── translations.py       # i18n message catalog (en/hi/mr)
+│   ├── session_store.py      # SQLite-backed session persistence
+│   ├── models/               # Data models (ConversationState)
+│   ├── services/             # API clients
+│   │   ├── whatsapp_client.py# Send/read receipts via WhatsApp Cloud API
+│   │   ├── solvency_service.py# Solvency/water-balance backend calls
+│   │   ├── sowing_service.py # Sowing advisory backend calls
+│   │   └── http.py           # Shared backend HTTP client
+│   └── api/                  # Flask web layer
+│       └── webhook.py        # WhatsApp webhook verify + handler
 ├── scripts/send_test_message.py  # Credential verification helper
+├── data/                    # Runtime data (sessions.db, gitignored)
+├── docs/                    # Architecture & refactor docs
 ├── requirements.txt
 └── README.md
 ```
